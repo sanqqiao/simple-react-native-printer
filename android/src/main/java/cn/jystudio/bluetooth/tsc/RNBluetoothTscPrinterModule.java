@@ -9,6 +9,7 @@ import com.facebook.react.bridge.*;
 
 import java.util.Map;
 import java.util.Vector;
+import com.printer.tscdemo.PrintContent;
 
  
 public class RNBluetoothTscPrinterModule extends ReactContextBaseJavaModule
@@ -170,6 +171,21 @@ implements BluetoothServiceStateObserver{
             tsc.addSound(2, 100); //打印标签后 蜂鸣器响
         }
         Vector<Byte> bytes = tsc.getCommand();
+        byte[] tosend = new byte[bytes.size()];
+        for(int i=0;i<bytes.size();i++){
+            tosend[i]= bytes.get(i);
+        }
+        if(sendDataByte(tosend)){
+            promise.resolve(null);
+        }else{
+            promise.reject("COMMAND_SEND_ERROR");
+        }
+    }
+
+    @ReactMethod
+    public void printLabelJiabo(final ReadableMap options, final Promise promise) {
+        
+        Vector<Byte> bytes = PrintContent.getLabel(0);
         byte[] tosend = new byte[bytes.size()];
         for(int i=0;i<bytes.size();i++){
             tosend[i]= bytes.get(i);

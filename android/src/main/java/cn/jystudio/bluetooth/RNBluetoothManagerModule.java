@@ -176,15 +176,15 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
             }
 
             // Check android 12 bluetooth permission
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                int bluetoothConnectPermission = ContextCompat.checkSelfPermission(reactContext, android.Manifest.permission.BLUETOOTH_CONNECT);
-                if (bluetoothConnectPermission == PackageManager.PERMISSION_DENIED) {
-                    ActivityCompat.requestPermissions(reactContext.getCurrentActivity(), new String[]{
-                    android.Manifest.permission.BLUETOOTH_CONNECT,
-                    android.Manifest.permission.BLUETOOTH_SCAN,
-                    }, 1);
-                } 
-            }
+            // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            //     int bluetoothConnectPermission = ContextCompat.checkSelfPermission(reactContext, android.Manifest.permission.BLUETOOTH_CONNECT);
+            //     if (bluetoothConnectPermission == PackageManager.PERMISSION_DENIED) {
+            //         ActivityCompat.requestPermissions(reactContext.getCurrentActivity(), new String[]{
+            //         android.Manifest.permission.BLUETOOTH_CONNECT,
+            //         android.Manifest.permission.BLUETOOTH_SCAN,
+            //         }, 1);
+            //     } 
+            // }
             
             pairedDeivce = new JSONArray();
             foundDevice = new JSONArray();

@@ -1,4 +1,15 @@
 declare module "simple-react-native-printer" {
+
+  export enum BLUETOOTH_EVENTS{
+    EVENT_DEVICE_ALREADY_PAIRED = "EVENT_DEVICE_ALREADY_PAIRED",
+    EVENT_DEVICE_FOUND = "EVENT_DEVICE_FOUND",
+    EVENT_DEVICE_DISCOVER_DONE = "EVENT_DEVICE_DISCOVER_DONE",
+    EVENT_CONNECTION_LOST = "EVENT_CONNECTION_LOST",
+    EVENT_UNABLE_CONNECT = "EVENT_UNABLE_CONNECT",
+    EVENT_CONNECTED = "EVENT_CONNECTED",
+    EVENT_BLUETOOTH_NOT_SUPPORT = "EVENT_BLUETOOTH_NOT_SUPPORT",
+  }
+
   export enum DIRECTION {
     FORWARD = 0,
     BACKWARD = 1,
@@ -184,6 +195,8 @@ declare module "simple-react-native-printer" {
     sound?: number | typeof READABLE;
     home?: number | typeof READABLE;
   };
+
+
 
   export class BluetoothManager {
     static enableBluetooth():

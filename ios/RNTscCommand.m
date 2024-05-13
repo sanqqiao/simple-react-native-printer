@@ -141,10 +141,11 @@ content:(NSString *) content
 {
     //str = "BARCODE " + x + "," + y + "," + "\"" + type.getValue() + "\"" + "," + height + "," + readable.getValue()
    // + "," + rotation.getValue() + "," + narrow + "," + wide + "," + "\"" + content + "\"" + "\r\n";
-    NSString *c =[NSString stringWithFormat:@"BARCODE %ld,%ld,\"%@\",%ld,%ld,%ld,%d,%d,\"%@\"\r\n",
-                  x,y,type,height,readable,rotation,narrow,wide,content];
-    NSLog(@"BARCODE COMMAND:%@",c);
-    [self addStrToCommand:c];
+    // NSString *c =[NSString stringWithFormat:@"BARCODE %ld,%ld,\"%@\",%ld,%ld,%ld,%d,%d,\"%@\"\r\n",
+    //               x,y,type,height,readable,rotation,narrow,wide,content];
+    // NSLog(@"BARCODE COMMAND:%@",c);
+    [self addStrToCommand:[NSString stringWithFormat:@"BARCODE %ld,%ld,\"%@\",%ld,%ld,%ld,%d,%d,\"%@\"\r\n",
+                  x,y,type,height,readable,rotation,narrow,wide,content]];
 }
 
 -(void)addQRCode:(NSInteger) x y:(NSInteger) y errorCorrectionLevel:(NSString *) level

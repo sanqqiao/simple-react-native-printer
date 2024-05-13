@@ -2,7 +2,7 @@
   "author": {
     "name": "simple",
     "email": "",
-    "url": ""
+    "url": "https://github.com/sanqqiao/simple-react-native-printer"
   },
   "bundleDependencies": false,
   "deprecated": false,
@@ -28,7 +28,7 @@
   "types": "./types/index.d.ts",
   "typings": "./types/index.d.ts",
   "name": "simple-react-native-printer",
-  "homepage": "",
+  "homepage": "https://github.com/sanqqiao/simple-react-native-printer",
   "repository": {
     "type": "git",
     "url": ""

@@ -1,8 +1,11 @@
-# tp-react-native-bluetooth-printer
+# simple-react-native-printer
+React-Native plugin for ESC/POS & TSC printers.
 
-React-Native plugin for the bluetooth ESC/POS & TSC printers.
+bluetooth ok
+usb 
+net
 
-This plugin is a fork of react-native-bluetooth-escpos-printer. Because we made changes print picture and print qr code methods.
+This plugin is a fork of tp-react-native-bluetooth-printer. Because we made changes with ./types/index.d.ts on TSC_BARCODETYPE values
 
 Any questions or bug please raise a issue.
 
@@ -13,17 +16,10 @@ Any questions or bug please raise a issue.
 ## Installation
 
 ### Step 1
-
-Install via NPM [Check In NPM](https://www.npmjs.com/package/tp-react-native-bluetooth-printer)
-
-```bash
-npm install tp-react-native-bluetooth-printer --save
-```
-
-Or install via github
+install via github
 
 ```bash
-npm install https://github.com/tulparyazilim/tp-react-native-bluetooth-printer.git --save
+npm install https://github.com/sanqqiao/simple-react-native-printer.git --save
 ```
 
 ### Step2
@@ -31,7 +27,7 @@ npm install https://github.com/tulparyazilim/tp-react-native-bluetooth-printer.g
 Link the plugin to your RN project
 
 ```bash
-react-native link tp-react-native-bluetooth-printer
+react-native link simple-react-native-printer
 ```
 
 Or you may need to link manually.
@@ -46,7 +42,7 @@ import {
   BluetoothManager,
   BluetoothEscposPrinter,
   BluetoothTscPrinter,
-} from "tp-react-native-bluetooth-printer";
+} from "simple-react-native-printer";
 ```
 
 ## Usage and APIs

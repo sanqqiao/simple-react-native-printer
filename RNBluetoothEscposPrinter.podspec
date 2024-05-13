@@ -7,7 +7,7 @@ Pod::Spec.new do |s|
   s.version      = package["version"]
   s.summary      = package["description"]
   s.author       = 'simple'
-  s.homepage     = ''
+  s.homepage     = 'https://github.com/sanqqiao/simple-react-native-printer'
   s.license      = package["license"]
   s.platform     = :ios, "9.0"
   s.source       = { :git => "", :tag => "#{s.version}" }

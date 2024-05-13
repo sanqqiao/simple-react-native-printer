@@ -134,7 +134,7 @@ text:(NSString *) text
 }
 
 -(void)add1DBarcode:(NSInteger) x y:(NSInteger) y
-barcodeType:(NSString *) type height:(NSInteger) height
+barcodeType:(NSString *) barcodeType height:(NSInteger) height
   wide:(NSInteger) wide narrow:(NSInteger) narrow
 readable:(NSInteger) readable rotation:(NSInteger) rotation
 content:(NSString *) content
@@ -142,7 +142,7 @@ content:(NSString *) content
     //str = "BARCODE " + x + "," + y + "," + "\"" + type.getValue() + "\"" + "," + height + "," + readable.getValue()
    // + "," + rotation.getValue() + "," + narrow + "," + wide + "," + "\"" + content + "\"" + "\r\n";
     NSString *c =[NSString stringWithFormat:@"BARCODE %ld,%ld,\"%@\",%ld,%ld,%ld,%d,%d,\"%@\"\r\n",
-                  x,y,type,height,readable,rotation,narrow,wide,content];
+                  x,y,barcodeType,height,readable,rotation,narrow,wide,content];
     NSLog(@"BARCODE COMMAND:%@",c);
     [self addStrToCommand:c];
 }

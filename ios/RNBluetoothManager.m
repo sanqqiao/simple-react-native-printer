@@ -294,6 +294,7 @@ RCT_EXPORT_METHOD(connect:(NSString *)address
     }
     [self.foundDevices addEntriesFromDictionary:peripheralStored];
     if(hasListeners){
+        NSLog(@"hasLisenter EVENT_DEVICE_FOUND call sendEventWithName address=%@",peripheral.identifier.UUIDString);
         [self sendEventWithName:EVENT_DEVICE_FOUND body:@{@"device":idAndName}];
     }
     if(_waitingConnect && [_waitingConnect isEqualToString: peripheral.identifier.UUIDString]){

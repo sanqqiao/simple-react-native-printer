@@ -130,7 +130,7 @@ RCT_EXPORT_METHOD(printLabel:(NSDictionary *) options withResolve:(RCTPromiseRes
        if(!narrow) narrow = 2;
        NSInteger rotation = [[bar valueForKey:@"rotation"] integerValue];
        NSString *code = [bar valueForKey:@"code"];
-       NSString *barcodeType = [bar valueForKey:@"type"];
+       NSString *barcodeType = [bar valueForKey:@"barcodeType"];
 
        NSLog(@"barcodeType %@ code %@",barcodeType,code);
        NSInteger readable = [[bar valueForKey:@"readable"] integerValue];

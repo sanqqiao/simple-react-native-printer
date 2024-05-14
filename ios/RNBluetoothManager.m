@@ -45,12 +45,14 @@ static NSTimer *timer;
 
 // Will be called when this module's first listener is added.
 -(void)startObserving {
+    NSLog(@"startObserving set hasListeners to YES.");
     hasListeners = YES;
     // Set up any upstream listeners or background tasks as necessary
 }
 
 // Will be called when this module's last listener is removed, or on dealloc.
 -(void)stopObserving {
+    NSLog(@"stopObserving set hasListeners to NO.");
     hasListeners = NO;
     // Remove upstream listeners, stop unnecessary background tasks
 }
@@ -293,6 +295,7 @@ RCT_EXPORT_METHOD(connect:(NSString *)address
         self.foundDevices = [[NSMutableDictionary alloc] init];
     }
     [self.foundDevices addEntriesFromDictionary:peripheralStored];
+    NSLog(@"hasListeners=%ld",hasListeners);
     if(hasListeners){
         NSLog(@"hasLisenter EVENT_DEVICE_FOUND call sendEventWithName address=%@",peripheral.identifier.UUIDString);
         [self sendEventWithName:EVENT_DEVICE_FOUND body:@{@"device":idAndName}];

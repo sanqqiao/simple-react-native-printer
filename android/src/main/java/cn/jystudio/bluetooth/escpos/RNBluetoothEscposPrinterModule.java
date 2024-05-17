@@ -174,7 +174,7 @@ public class RNBluetoothEscposPrinterModule extends ReactContextBaseJavaModule
             }
             int maxLen = deviceWidth/8;
             if(totalLen>maxLen){
-                promise.reject("COLUNM_WIDTHS_TOO_LARGE");
+                promise.reject("COLUMN_WIDTHS_TOO_LARGE");
                 return;
             }
 
@@ -297,7 +297,8 @@ public class RNBluetoothEscposPrinterModule extends ReactContextBaseJavaModule
         for(int i=0;i<rowsToPrint.length;i++){
             rowsToPrint[i].append("\n\r");//wrap line..
             try {
- 
+//                byte[] toPrint = rowsToPrint[i].toString().getBytes("UTF-8");
+//                String text = new String(toPrint, Charset.forName(encoding));
                 if (!sendDataByte(PrinterCommand.POS_Print_Text(rowsToPrint[i].toString(), encoding, codepage, widthTimes, heigthTimes, fonttype))) {
                     promise.reject("COMMAND_NOT_SEND");
                     return;
@@ -436,12 +437,50 @@ public class RNBluetoothEscposPrinterModule extends ReactContextBaseJavaModule
 
     @ReactMethod
     public void printBarCode(String str, int nType, int nWidthX, int nHeight,
-                             int nHriFontType, int nHriFontPosition) {
-        byte[] command = PrinterCommand.getBarCodeCommand(str, nType, nWidthX, nHeight, nHriFontType, nHriFontPosition);
-        sendDataByte(command);
+                             int nHriFontType, int nHriFontPosition, final Promise promise) {
+        try{
+            byte[] command = PrinterCommand.getBarCodeCommand(str, nType, nWidthX, nHeight, nHriFontType, nHriFontPosition);
+            if (sendDataByte(command)) {
+                promise.resolve(null);
+            } else {
+                promise.reject("COMMAND_NOT_SEND");
+            }
+
+         }catch (Exception e){
+            promise.reject(e.getMessage(), e);
+        }
     }
 
-   
+    @ReactMethod
+    public void openDrawer(int nMode, int nTime1, int nTime2, final Promise promise) {
+        try{
+            byte[] command = PrinterCommand.POS_Set_Cashbox(nMode, nTime1, nTime2);
+            if (sendDataByte(command)) {
+                promise.resolve(null);
+            } else {
+                promise.reject("COMMAND_NOT_SEND");
+            }
+
+         }catch (Exception e){
+            promise.reject(e.getMessage(), e);
+        }
+    }
+
+
+    @ReactMethod
+    public void cutOnePoint(final Promise promise) {
+        try{
+            byte[] command = PrinterCommand.POS_Cut_One_Point();
+            if (sendDataByte(command)) {
+                promise.resolve(null);
+            } else {
+                promise.reject("COMMAND_NOT_SEND");
+            }
+         }catch (Exception e){
+            promise.reject(e.getMessage(), e);
+        }
+    }
+
     private boolean sendDataByte(byte[] data) {
         if (data==null || mService.getState() != BluetoothService.STATE_CONNECTED) {
             return false;

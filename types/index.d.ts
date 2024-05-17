@@ -277,6 +277,12 @@ declare module "simple-react-native-printer" {
       fontType: number | typeof FONTTYPE,
       fontPosition: number
     ): void | string | PromiseLike<void> | PromiseLike<string>;
+    static openDrawer(
+      nMode: number,
+      nTime1: number,
+      nTime2: number
+    ) : PromiseLike<void> | PromiseLike<string>;
+    static cutOnePoint() : PromiseLike<void> | PromiseLike<string>;
   }
 
   export class BluetoothTscPrinter {

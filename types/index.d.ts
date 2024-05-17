@@ -209,6 +209,7 @@ declare module "simple-react-native-printer" {
       | ScannedBluetoothDevices
       | PromiseLike<ScannedBluetoothDevices>;
     static connect(address: string): void | PromiseLike<void>;
+    static disconnect(address: string): void | PromiseLike<string>;
     static getConnectedDevice():
       | BluetoothDevice[]
       | PromiseLike<BluetoothDevice[]>;

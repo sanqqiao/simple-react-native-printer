@@ -153,6 +153,21 @@ RCT_EXPORT_METHOD(printLabel:(NSDictionary *) options withResolve:(RCTPromiseRes
     [RNBluetoothManager writeValue:toPrint withDelegate:self];
 }
 
+//resetPrinter
+RCT_EXPORT_METHOD(resetPrinter:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    RNTscCommand *tsc = [[RNTscCommand alloc] init];
+    [tsc addCls];
+    [tsc addResetPrinter];
+    _pendingReject = reject;
+    _pendingResolve = resolve;
+    toPrint = tsc.command;
+    now = 0;
+    [RNBluetoothManager writeValue:toPrint withDelegate:self];
+}
+
+
 - (void) didWriteDataToBle: (BOOL)success{
     if(success){
         if(_pendingResolve){

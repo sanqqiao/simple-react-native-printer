@@ -77,6 +77,16 @@
 {
       [self addStrToCommand:@"CLS\r\n"];
 }
+-(void)addResetPrinter
+{
+    Byte bytes[]={0x1b,0x21,0x52};
+    [self addStrToCommand:[NSString stringWithFormat:@"%02lx", (long)bytes[0]]];
+    [self addStrToCommand:[NSString stringWithFormat:@"%02lx", (long)bytes[1]]];
+    [self addStrToCommand:[NSString stringWithFormat:@"%02lx", (long)bytes[2]]];
+    // [self addStrToCommand:[NSString stringWithFormat:@"%@",[[NSString alloc]initWithFormat:@"%02lx",(long)bytes[0]]]];
+    // [self addStrToCommand:[NSString stringWithFormat:@"%@",[[NSString alloc]initWithFormat:@"%02lx",(long)bytes[1]]]];
+    // [self addStrToCommand:[NSString stringWithFormat:@"%@",[[NSString alloc]initWithFormat:@"%02lx",(long)bytes[1]]]];
+}
 -(void)addFeed:(NSInteger) dot
 {
       [self addStrToCommand:[NSString stringWithFormat:@"FEED %ld\r\n",dot]];

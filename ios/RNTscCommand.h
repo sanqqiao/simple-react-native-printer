@@ -24,6 +24,7 @@
 -(void)addReference:(NSInteger) x y:(NSInteger) y;
 -(void)addShif:(NSInteger) shif;
 -(void)addCls;
+-(void)addResetPrinter;
 -(void)addFeed:(NSInteger) dot;
 -(void)addBackFeed:(NSInteger) backDot;
 -(void)addFormFeed;

@@ -290,5 +290,7 @@ declare module "simple-react-native-printer" {
     static printLabel(
       options: PrintLabelOptions
     ): void | string | PromiseLike<void> | PromiseLike<string>;
+
+    static resetPrinter(): void | string | PromiseLike<void> | PromiseLike<string>;
   }
 }

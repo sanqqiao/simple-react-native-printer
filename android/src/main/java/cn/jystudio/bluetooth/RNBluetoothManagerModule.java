@@ -163,52 +163,156 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
         promise.resolve(adapter!=null && adapter.isEnabled());
     }
 
+    // @ReactMethod
+    // public void scanDevices(final Promise promise) {
+    //     BluetoothAdapter adapter = this.getBluetoothAdapter();
+    //     if(adapter == null){
+    //         promise.reject(EVENT_BLUETOOTH_NOT_SUPPORT);
+    //     }else {
+    //         cancelDisCovery();
+    //         int permissionChecked = ContextCompat.checkSelfPermission(reactContext, android.Manifest.permission.ACCESS_FINE_LOCATION);
+    //         if (permissionChecked == PackageManager.PERMISSION_DENIED) { 
+    //             ActivityCompat.requestPermissions(reactContext.getCurrentActivity(), new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+    //         }
+
+    //         // Check android 12 bluetooth permission
+    //         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    //             int bluetoothConnectPermission = ContextCompat.checkSelfPermission(reactContext, android.Manifest.permission.BLUETOOTH_CONNECT);
+    //             if (bluetoothConnectPermission == PackageManager.PERMISSION_DENIED) {
+    //                 ActivityCompat.requestPermissions(reactContext.getCurrentActivity(), new String[]{
+    //                 android.Manifest.permission.BLUETOOTH_CONNECT,
+    //                 android.Manifest.permission.BLUETOOTH_SCAN,
+    //                 }, 1);
+    //             } 
+    //         }
+            
+    //         pairedDeivce = new JSONArray();
+    //         foundDevice = new JSONArray();
+    //         Set<BluetoothDevice> boundDevices = adapter.getBondedDevices();
+    //         for (BluetoothDevice d : boundDevices) {
+    //             try {
+    //                 JSONObject obj = new JSONObject();
+    //                 obj.put("name", d.getName());
+    //                 obj.put("address", d.getAddress());
+    //                 pairedDeivce.put(obj);
+    //             } catch (Exception e) {
+    //                 //ignore.
+    //             }
+    //         }
+
+    //         WritableMap params = Arguments.createMap();
+    //         params.putString("devices", pairedDeivce.toString());
+    //         emitRNEvent(EVENT_DEVICE_ALREADY_PAIRED, params);
+    //         if (!adapter.startDiscovery()) {
+    //             promise.reject("DISCOVER", "NOT_STARTED");
+    //             cancelDisCovery();
+    //         } else {
+    //             promiseMap.put(PROMISE_SCAN, promise);
+    //         }
+    //     }
+    // }
+
+    private static final int REQ_BT_PERMISSIONS = 1001;
+    private Promise pendingPromise;   // 暂存 Promise
+
     @ReactMethod
     public void scanDevices(final Promise promise) {
-        BluetoothAdapter adapter = this.getBluetoothAdapter();
-        if(adapter == null){
-            promise.reject(EVENT_BLUETOOTH_NOT_SUPPORT);
-        }else {
-            cancelDisCovery();
-            int permissionChecked = ContextCompat.checkSelfPermission(reactContext, android.Manifest.permission.ACCESS_FINE_LOCATION);
-            if (permissionChecked == PackageManager.PERMISSION_DENIED) { 
-                ActivityCompat.requestPermissions(reactContext.getCurrentActivity(), new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-            }
+        BluetoothAdapter adapter = getBluetoothAdapter();
+        if (adapter == null) {
+            promise.reject(EVENT_BLUETOOTH_NOT_SUPPORT, "Bluetooth not supported");
+            return;
+        }
 
-            // Check android 12 bluetooth permission
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                int bluetoothConnectPermission = ContextCompat.checkSelfPermission(reactContext, android.Manifest.permission.BLUETOOTH_CONNECT);
-                if (bluetoothConnectPermission == PackageManager.PERMISSION_DENIED) {
-                    ActivityCompat.requestPermissions(reactContext.getCurrentActivity(), new String[]{
-                    android.Manifest.permission.BLUETOOTH_CONNECT,
-                    android.Manifest.permission.BLUETOOTH_SCAN,
-                    }, 1);
-                } 
+        // 一次性校验所有权限
+        if (!hasRequiredPermissions()) {
+            pendingPromise = promise;
+            requestBtPermissions();
+            return;
+        }
+
+        // 已有权限，直接干活
+        doScan(adapter, promise);
+    }
+
+    /* ===================== 权限相关 ===================== */
+    private boolean hasRequiredPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return ContextCompat.checkSelfPermission(reactContext, Manifest.permission.BLUETOOTH_CONNECT)
+                    == PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(reactContext, Manifest.permission.BLUETOOTH_SCAN)
+                    == PackageManager.PERMISSION_GRANTED;
+        } else {
+            return ContextCompat.checkSelfPermission(reactContext, Manifest.permission.ACCESS_FINE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED;
+        }
+    }
+
+    private void requestBtPermissions() {
+        Activity activity = reactContext.getCurrentActivity();
+        if (activity == null) {
+            if (pendingPromise != null) {
+                pendingPromise.reject("NO_ACTIVITY", "No current activity");
+                pendingPromise = null;
             }
-            
-            pairedDeivce = new JSONArray();
-            foundDevice = new JSONArray();
-            Set<BluetoothDevice> boundDevices = adapter.getBondedDevices();
-            for (BluetoothDevice d : boundDevices) {
-                try {
-                    JSONObject obj = new JSONObject();
-                    obj.put("name", d.getName());
-                    obj.put("address", d.getAddress());
-                    pairedDeivce.put(obj);
-                } catch (Exception e) {
-                    //ignore.
+            return;
+        }
+        List<String> perms = new ArrayList<>();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            perms.add(Manifest.permission.BLUETOOTH_CONNECT);
+            perms.add(Manifest.permission.BLUETOOTH_SCAN);
+        } else {
+            perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+        ActivityCompat.requestPermissions(activity, perms.toArray(new String[0]), REQ_BT_PERMISSIONS);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == REQ_BT_PERMISSIONS && pendingPromise != null) {
+            boolean allGranted = true;
+            for (int r : grantResults) {
+                if (r != PackageManager.PERMISSION_GRANTED) allGranted = false;
+            }
+            if (allGranted) {
+                BluetoothAdapter adapter = getBluetoothAdapter();
+                if (adapter != null) {
+                    doScan(adapter, pendingPromise);
+                } else {
+                    pendingPromise.reject(EVENT_BLUETOOTH_NOT_SUPPORT, "Bluetooth not supported");
                 }
-            }
-
-            WritableMap params = Arguments.createMap();
-            params.putString("devices", pairedDeivce.toString());
-            emitRNEvent(EVENT_DEVICE_ALREADY_PAIRED, params);
-            if (!adapter.startDiscovery()) {
-                promise.reject("DISCOVER", "NOT_STARTED");
-                cancelDisCovery();
             } else {
-                promiseMap.put(PROMISE_SCAN, promise);
+                pendingPromise.reject("PERMISSION_DENIED", "Bluetooth permissions denied");
             }
+            pendingPromise = null;
+        }
+    }
+
+    /* ===================== 真正干活 ===================== */
+    private void doScan(BluetoothAdapter adapter, Promise promise) {
+        cancelDisCovery();
+
+        pairedDeivce = new JSONArray();
+        foundDevice = new JSONArray();
+
+        Set<BluetoothDevice> boundDevices = adapter.getBondedDevices();
+        for (BluetoothDevice d : boundDevices) {
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("name", d.getName());
+                obj.put("address", d.getAddress());
+                pairedDeivce.put(obj);
+            } catch (Exception ignore) {}
+        }
+
+        WritableMap params = Arguments.createMap();
+        params.putString("devices", pairedDeivce.toString());
+        emitRNEvent(EVENT_DEVICE_ALREADY_PAIRED, params);
+
+        if (!adapter.startDiscovery()) {
+            promise.reject("DISCOVER", "NOT_STARTED");
+            cancelDisCovery();
+        } else {
+            promiseMap.put(PROMISE_SCAN, promise);
         }
     }
 

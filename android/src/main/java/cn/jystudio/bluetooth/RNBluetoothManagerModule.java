@@ -19,6 +19,8 @@ import com.facebook.react.bridge.*;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import com.facebook.react.modules.core.PermissionListener;   // +import
+import com.facebook.react.modules.core.PermissionAwareActivity;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Method;
@@ -26,9 +28,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 
 public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
-        implements ActivityEventListener, BluetoothServiceStateObserver {
+        implements ActivityEventListener, BluetoothServiceStateObserver, PermissionListener {
 
     private static final String TAG = "BluetoothManager";
     private final ReactApplicationContext reactContext;
@@ -163,9 +167,73 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
         promise.resolve(adapter!=null && adapter.isEnabled());
     }
 
-    private static final int REQ_BT_PERMISSIONS = 1001;
+    private static final int REQ_BT_CONNECT  = 1001; // Bluetooth 组
+    private static final int REQ_BT_SCAN     = 1002; // Nearby Devices 组
     private Promise pendingPromise;   // 暂存 Promise
+ /* ===================== 权限相关 ===================== */
+    private boolean hasRequiredPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return ContextCompat.checkSelfPermission(reactContext, android.Manifest.permission.BLUETOOTH_CONNECT)
+                    == PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(reactContext, android.Manifest.permission.BLUETOOTH_SCAN)
+                    == PackageManager.PERMISSION_GRANTED;
+        } else {
+            return ContextCompat.checkSelfPermission(reactContext, android.Manifest.permission.ACCESS_FINE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED;
+        }
+    }
+    private void requestBtPermissions() {
+        PermissionAwareActivity activity = (PermissionAwareActivity) getCurrentActivity();
+        if (activity == null) {
+            rejectPending("NO_ACTIVITY", "No PermissionAwareActivity");
+            return;
+        }
+        // 1. 先申请 Bluetooth 组
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)) {
+                // 已有 CONNECT，继续申请 SCAN
+                requestScanPermission(activity);
+            } else {
+                activity.requestPermissions(
+                        new String[]{android.Manifest.permission.BLUETOOTH_CONNECT},
+                        REQ_BT_CONNECT, this);
+            }
+        } else {
+            // 旧系统只申请定位
+            activity.requestPermissions(
+                    new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
+                    REQ_BT_CONNECT, this);
+        }
+    }
 
+    private void requestScanPermission(PermissionAwareActivity activity) {
+        if (checkSelfPermission(android.Manifest.permission.BLUETOOTH_SCAN)) {
+            resumeScan(); // 已有权限
+        } else {
+            activity.requestPermissions(
+                    new String[]{android.Manifest.permission.BLUETOOTH_SCAN},
+                    REQ_BT_SCAN, this);
+        }
+    }
+
+    private boolean checkSelfPermission(String perm) {
+        return ContextCompat.checkSelfPermission(reactContext, perm)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void resumeScan() {
+        BluetoothAdapter adapter = getBluetoothAdapter();
+        if (adapter != null) doScan(adapter, pendingPromise);
+        pendingPromise = null;
+    }
+
+    private void rejectPending(String code, String msg) {
+        if (pendingPromise != null) {
+            pendingPromise.reject(code, msg);
+            pendingPromise = null;
+        }
+    }
+    private long lastScanTime = 0;
     @ReactMethod
     public void scanDevices(final Promise promise) {
         BluetoothAdapter adapter = getBluetoothAdapter();
@@ -173,69 +241,60 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
             promise.reject(EVENT_BLUETOOTH_NOT_SUPPORT, "Bluetooth not supported");
             return;
         }
-
-        // 一次性校验所有权限
-        if (!hasRequiredPermissions()) {
-            pendingPromise = promise;
-            requestBtPermissions();
+        if (!adapter.isEnabled()) {
+            promise.reject("BT_DISABLED", "Bluetooth off");
             return;
         }
 
-        // 已有权限，直接干活
+        /* 1. 限流：1.2 秒内不允许重复扫描 */
+        long now = System.currentTimeMillis();
+        if (now - lastScanTime < 1200) {
+            promise.reject("SCAN_THROTTLE", "Scan too frequent");
+            return;
+        }
+        lastScanTime = now;
+
+        /* 2. 权限检查 / 申请 */
+        if (!hasRequiredPermissions()) {
+            pendingPromise = promise;
+            requestBtPermissions();          // 内部串行申请 CONNECT → SCAN
+            return;
+        }
+
+        /* 3. 真正扫描 */
         doScan(adapter, promise);
     }
 
-    /* ===================== 权限相关 ===================== */
-    private boolean hasRequiredPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            return ContextCompat.checkSelfPermission(reactContext, Manifest.permission.BLUETOOTH_CONNECT)
-                    == PackageManager.PERMISSION_GRANTED
-                    && ContextCompat.checkSelfPermission(reactContext, Manifest.permission.BLUETOOTH_SCAN)
-                    == PackageManager.PERMISSION_GRANTED;
-        } else {
-            return ContextCompat.checkSelfPermission(reactContext, Manifest.permission.ACCESS_FINE_LOCATION)
-                    == PackageManager.PERMISSION_GRANTED;
-        }
-    }
-
-    private void requestBtPermissions() {
-        Activity activity = reactContext.getCurrentActivity();
-        if (activity == null) {
-            if (pendingPromise != null) {
-                pendingPromise.reject("NO_ACTIVITY", "No current activity");
-                pendingPromise = null;
-            }
-            return;
-        }
-        List<String> perms = new ArrayList<>();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            perms.add(Manifest.permission.BLUETOOTH_CONNECT);
-            perms.add(Manifest.permission.BLUETOOTH_SCAN);
-        } else {
-            perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        }
-        ActivityCompat.requestPermissions(activity, perms.toArray(new String[0]), REQ_BT_PERMISSIONS);
-    }
-
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == REQ_BT_PERMISSIONS && pendingPromise != null) {
-            boolean allGranted = true;
-            for (int r : grantResults) {
-                if (r != PackageManager.PERMISSION_GRANTED) allGranted = false;
+    public boolean onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == REQ_BT_CONNECT) {
+            boolean connectGranted = grantResults.length > 0 &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (!connectGranted) {
+                rejectPending("PERMISSION_DENIED", "BLUETOOTH_CONNECT denied");
+                return true;
             }
-            if (allGranted) {
-                BluetoothAdapter adapter = getBluetoothAdapter();
-                if (adapter != null) {
-                    doScan(adapter, pendingPromise);
-                } else {
-                    pendingPromise.reject(EVENT_BLUETOOTH_NOT_SUPPORT, "Bluetooth not supported");
-                }
+            // 第一轮通过，再申请 SCAN
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                requestScanPermission((PermissionAwareActivity) getCurrentActivity());
             } else {
-                pendingPromise.reject("PERMISSION_DENIED", "Bluetooth permissions denied");
+                // 旧系统直接开始扫描
+                resumeScan();
             }
-            pendingPromise = null;
+            return true;
         }
+
+        if (requestCode == REQ_BT_SCAN) {
+            boolean scanGranted = grantResults.length > 0 &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (scanGranted) {
+                resumeScan();
+            } else {
+                rejectPending("PERMISSION_DENIED", "BLUETOOTH_SCAN denied");
+            }
+            return true;
+        }
+        return false;
     }
 
     /* ===================== 真正干活 ===================== */
@@ -255,16 +314,25 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
             } catch (Exception ignore) {}
         }
 
+        Log.e(TAG, EVENT_DEVICE_ALREADY_PAIRED);
         WritableMap params = Arguments.createMap();
         params.putString("devices", pairedDeivce.toString());
         emitRNEvent(EVENT_DEVICE_ALREADY_PAIRED, params);
 
+        Log.e(TAG, " promiseMap.remove(PROMISE_SCAN);");
+        promiseMap.remove(PROMISE_SCAN);
+        /* 1. 先记录 Promise，防止并发 */
+
+        Log.e(TAG, " promiseMap.put(PROMISE_SCAN, promise);;");
+        promiseMap.put(PROMISE_SCAN, promise);
+
+        /* 2. 再启动扫描 */
         if (!adapter.startDiscovery()) {
+            // 只有底层返回 false 才移除并 reject
+            promiseMap.remove(PROMISE_SCAN);
             promise.reject("DISCOVER", "NOT_STARTED");
-            cancelDisCovery();
-        } else {
-            promiseMap.put(PROMISE_SCAN, promise);
         }
+        // 返回 true 时什么都不做，等广播结束再 resolve
     }
 
     @ReactMethod

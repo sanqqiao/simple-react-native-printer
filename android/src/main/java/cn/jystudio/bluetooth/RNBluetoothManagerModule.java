@@ -169,7 +169,6 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
 
     private static final int REQ_BT_CONNECT  = 1001; // Bluetooth 组
     
- /* ===================== 权限相关 ===================== */
     private boolean hasRequiredPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             return checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
@@ -213,31 +212,30 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
     public void scanDevices(final Promise promise) {
         BluetoothAdapter adapter = getBluetoothAdapter();
         if (adapter == null) {
-            promise.reject(EVENT_BLUETOOTH_NOT_SUPPORT, "Bluetooth not supported");
+            promise.reject(EVENT_BLUETOOTH_NOT_SUPPORT, "当前设备不支持蓝牙功能");
             return;
         }
         if (!adapter.isEnabled()) {
-            promise.reject("BT_DISABLED", "Bluetooth off");
+            promise.reject("BT_DISABLED", "蓝牙功能未开启");
             return;
         }
 
         /* 1. 限流：1.2 秒内不允许重复扫描 */
         long now = System.currentTimeMillis();
         if (now - lastScanTime < 1200) {
-            promise.reject("SCAN_THROTTLE", "Scan too frequent");
+            promise.reject("SCAN_THROTTLE", "扫描过于频繁，请稍后再试");
             return;
         }
         lastScanTime = now;
 
+        //缓存promise
         promiseMap.put(PROMISE_SCAN, promise);
         /* 2. 权限检查 / 申请 */
         if (!hasRequiredPermissions()) {
-            requestBtPermissions(promise);          // 内部串行申请 CONNECT → SCAN
+            requestBtPermissions(promise);
             return;
         }
         
-        Log.e(TAG, " promiseMap.put(PROMISE_SCAN, promise);;");
-        //缓存
         doScan(adapter);
     }
 
@@ -249,7 +247,7 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
             if (!connectGranted) {
                 Promise promise = promiseMap.remove(PROMISE_SCAN);
                 if(promise != null)
-                    promise.reject("PERMISSION_DENIED", "BLUETOOTH_CONNECT denied");
+                    promise.reject("PERMISSION_DENIED", "蓝牙权限被拒绝");
                 return true;
             }
                 
@@ -287,7 +285,7 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
             // 只有底层返回 false 才移除并 reject
             Promise promise = promiseMap.remove(PROMISE_SCAN);
             if(promise != null){
-                promise.reject("DISCOVER", "NOT_STARTED");
+                promise.reject("DISCOVER", "扫描未启动");
             }
         }
         // 返回 true 时什么都不做，等广播结束再 resolve
@@ -302,7 +300,7 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
                  promiseMap.put(PROMISE_CONNECT, promise);
                  mService.connect(device);
              } else {
-                 promise.reject("BT NOT ENABLED");
+                 promise.reject("BT_NOT_ENABLED", "蓝牙未开启");
              }
         }
         catch (Exception e) {
@@ -346,7 +344,7 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
             }
             promise.resolve(address);
         } else {
-            promise.reject("BT NOT ENABLED");
+            promise.reject("BT_NOT_ENABLED", "蓝牙未开启");
         }
 
 	}
@@ -359,7 +357,7 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
             this.unpairDevice(device);
             promise.resolve(address);
         } else {
-            promise.reject("BT NOT ENABLED");
+            promise.reject("BT_NOT_ENABLED", "蓝牙未开启");
         }
 
     }
